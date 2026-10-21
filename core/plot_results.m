@@ -42,7 +42,7 @@ function figs = plot_results(model, res)
         V = model.Nodes + 0.08 * diag_len * U / max(mag);
         patch('Faces', F, 'Vertices', V * 1e3, 'FaceVertexCData', mag / max(mag), 'FaceColor', 'interp', ...
               'EdgeColor', 'none');
-        colormap(turbo); clim([0 1]); axis equal; grid on; view(35, 28);
+        colormap(turbo); clim([0 1]); axis equal tight; grid on; view(35, 28);
         title(sprintf('Mode %d: %.0f Hz', k, res.NaturalFreqs(k)));
     end
     colorbar;

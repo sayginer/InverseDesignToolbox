@@ -19,7 +19,7 @@ function figs = plot_geometry(geom)
         F = boundary_faces(geom.Parts(i).Tets);
         patch('Faces', F, 'Vertices', geom.Parts(i).Nodes * 1e3, 'FaceColor', cmap(i, :), ...
               'EdgeColor', 'none', 'FaceAlpha', 0.95);
-        axis equal; grid on; view(35, 28); camlight headlight; lighting gouraud;
+        axis equal tight; grid on; view(35, 28); camlight headlight; lighting gouraud;
         xlabel('x (mm)'); ylabel('y (mm)'); zlabel('z (mm)');
         b = geom.Parts(i).BBox * 1e3;
         title({sprintf('Part %d: %s (%s)', i, geom.Parts(i).Name, mName), ...
@@ -39,6 +39,6 @@ function figs = plot_geometry(geom)
     pdegplot(geom.Assembly, 'FaceLabels', 'on', 'FaceAlpha', 0);   % edges + face numbers only
     legend(h, {geom.Parts.Name}, 'Location', 'bestoutside', 'Interpreter', 'none');
     title('Fused assembly: one color per domain, face numbers for boundary conditions');
-    view(35, 28); axis equal;
+    view(35, 28); axis equal tight;
     figs = [f1 f2];
 end

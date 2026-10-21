@@ -13,7 +13,7 @@ function fig = plot_design(model, X)
     fig = figure('Name', 'Design', 'Color', 'w', 'Position', [180 100 760 580]);
     patch('Faces', F, 'Vertices', model.Nodes * 1e3, 'FaceVertexCData', cmap(part, :), ...
           'FaceColor', 'flat', 'EdgeColor', 'none', 'FaceLighting', 'flat');
-    hold on; axis equal; grid on; view(35, 28); camlight headlight;
+    hold on; axis equal tight; grid on; view(35, 28); camlight headlight;
     c = model.Nodes * 1e3;
     h1 = plot3(c(model.FixedNodes,1), c(model.FixedNodes,2), c(model.FixedNodes,3), 'r^', ...
                'MarkerFaceColor', 'r', 'MarkerSize', 3);

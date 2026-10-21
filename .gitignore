@@ -1,0 +1,12 @@
+# optimizer outputs are large and regenerated; the small parameter files of the examples are kept
+results/*.mat
+results/*.stl
+!results/CantileverBeam.mat
+!results/VibrationIsolator.mat
+!results/AIdesigner_trial_notes.txt
+*.asv
+*.autosave
+slprj/
+.vscode/
+# the student guide is published on the website only, not in the repository
+docs/guide/

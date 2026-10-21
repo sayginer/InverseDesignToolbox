@@ -1,0 +1,19 @@
+You are helping me design a lightweight but stiff cantilever beam. I will run your design in a finite-element solver and tell you the result.
+
+GEOMETRY: a plate 150 x 10 x 50 mm (x = length, y = thickness, z = height). An outer frame (steel) cannot be changed.
+Inside it, a web (aluminum) is divided into a grid of 21 x 1 x 6 bricks (index i along x, j through the thickness, k along z). Brick index i = 1 is at the clamped end.
+LOADS: the left end (i = 1 side) is clamped. A downward force of 500 N acts on the right end.
+REMOVABLE BRICKS: 126 bricks (listed below as i j k). Every other brick is fixed.
+GOAL: remove bricks so that the beam is as STIFF as possible (smallest tip deflection) while keeping at most 63 of the 126 removable bricks (50 %).
+RULES: only remove bricks from the list. The remaining bricks must stay connected from the clamped end to the loaded end.
+
+Layer map of the removable bricks (# = removable brick; columns = i from 1, rows = k from the top layer down to k = 1):
+  k=6  #####################
+  k=5  #####################
+  k=4  #####################
+  k=3  #####################
+  k=2  #####################
+  k=1  #####################
+
+ANSWER FORMAT: reply with ONE line of MATLAB code that lists the bricks to REMOVE, like   removeIJK = [i j k; i j k; ...];   and a two-sentence reason.
+(For reference the full beam has a tip deflection of 45.5 micrometers; a design that keeps the beam stiff while removing 63 bricks is the aim.)

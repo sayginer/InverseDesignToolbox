@@ -1,0 +1,28 @@
+# CITATION.cff - how to cite InverseDesignToolbox.
+# GitHub shows a "Cite this repository" button when this file is in the root of a public repository, and Zenodo can
+# use it when it archives a release. For every new release: update `version` and `date-released` (the `doi` stays).
+# Optional: add your ORCID below. See docs/12_citation_and_release.md.
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata in this file."
+type: software
+title: "InverseDesignToolbox: a modular MATLAB toolbox for inverse design with finite elements"
+abstract: "A teaching and research toolbox for inverse design with finite elements: import CAD, set supports and loads, analyse static and vibration problems, and search for better designs with SIMP topology optimization, a genetic algorithm, a neural-network surrogate and shape cutters. Includes exercises for machine learning and AI-assisted design."
+authors:
+  - family-names: "Sayginer"
+    given-names: "Osman"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+license: MIT
+keywords:
+  - inverse design
+  - finite element method
+  - topology optimization
+  - genetic algorithm
+  - neural network
+  - surrogate model
+  - engineering education
+  - MATLAB
+version: "1.0.0"
+date-released: "2026-10-20"
+doi: "10.5281/zenodo.23523181"
+url: "https://InverseDesignToolbox.sayginer.com"
+# repository-code: "https://github.com/<your-account>/InverseDesignToolbox"   # add after you create the repository

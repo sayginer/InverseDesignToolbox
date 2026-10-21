@@ -20,6 +20,7 @@ function model = idt_build_model(P)
 
     P      = idt_prepare_params(P);
     geom   = idt_import_geometry(P);
+    idt_validate_params(P, geom);                % stops with a plain-language list if something is wrong
     bricks = idt_make_bricks(P, geom);
     bc     = idt_make_bc(P);
     mesh   = idt_make_mesh(P, geom);

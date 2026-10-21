@@ -21,6 +21,7 @@ function P = idt_default_params()
                             struct('Name', 'TPU',       'E', 0.05e9, 'nu', 0.45, 'rho', 1200), ...
                             struct('Name', 'TPU',       'E', 0.05e9, 'nu', 0.45, 'rho', 1200)};
     P.Geometry.Scale     = 1;
+    P.Geometry.Rotate    = [];         % [] = as in the file | [angle_deg ax ay az] rotates every part about that axis through the origin
 
     %% 2. DESIGN DOMAIN (the part of the geometry an optimizer may change)
     P.Design.Type         = 'bricks';   % 'bricks' | 'none' (analysis of the geometry exactly as imported)
@@ -30,9 +31,12 @@ function P = idt_default_params()
     P.Design.Layers       = [0 0 3];    % bricks: hard layer counts [nx ny nz], 0 = automatic
     P.Design.MinFill      = 0.5;        % bricks: a cell must be at least this full of design material
     P.Design.MaxOverlap   = 0;          % bricks: ... and overlap other parts by at most this fraction
+    P.Design.Damper       = [];         % [] = bricks are present / removed. A material struct (Name, E, nu, rho, LossFactor) adds a soft, lossy
+                                        % DAMPER grade: a brick is void (0), structure (1) or damper (2)
 
     %% 3. BOUNDARY CONDITIONS
     P.BC.FixedFaces     = [1 2 3 4];
+    P.BC.LoadFaces      = [];           % [] = load at LoadPoint; face IDs = force spread over these faces
     P.BC.LoadPoint      = [0 0 5e-3];
     P.BC.LoadDirection  = [0 0 1];
     P.BC.LoadAmplitude  = 1.0;

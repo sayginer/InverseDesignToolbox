@@ -39,6 +39,7 @@ function out = nn_optimize(model, H)
     rounds = repmat(struct('R2', NaN, 'MAPE', NaN, 'nData', 0, 'nVerified', 0, 'nUsable', 0, 'bias', 0, ...
                            'errFirst', NaN, 'errLast', NaN, 'candBest', NaN, 'bestTrue', NaN, 'bestVol', NaN), 1, H.Rounds);
     rs = RandStream('twister', 'Seed', H.Seed + 1);
+    gaHist = struct('best', [], 'mean', [], 'start', []);   % convergence of the searches on the surrogate (all rounds and passes)
 
     for r = 1:H.Rounds
         %% 1. train
@@ -57,7 +58,8 @@ function out = nn_optimize(model, H)
                 'PopulationSize', H.PopSize, 'MaxGenerations', H.Generations, 'MaxStallGenerations', 40, ...
                 'InitialPopulationMatrix', double(D.X(seedIdx, :)), 'CrossoverFraction', 0.8, ...
                 'CrossoverFcn', @crossovertwopoint, ...     % swaps contiguous blocks of bricks, keeps local structure
-                'MutationFcn', {@mutationuniform, 0.004}, 'EliteCount', 5, 'Display', 'off');
+                'MutationFcn', {@mutationuniform, 0.004}, 'EliteCount', 5, 'Display', 'off', 'OutputFcn', @recordGA);
+            gaHist.start(end + 1) = numel(gaHist.best) + 1;      % where this search starts in the convergence curve
             [~, ~, ~, ~, pop, sc] = ga(fit, nVar, [], [], [], [], [], [], [], gaopts);
 
             %% 3. verify the best new candidates with the real analysis
@@ -123,11 +125,18 @@ function out = nn_optimize(model, H)
     M(model.Bricks.Present) = 1;
     M(model.VarBricks) = double(X);
     out = struct('X', X, 'M', M, 'met', met, 'res', res, 'D', D, 'sur', sur, 'Rounds', rounds, 'Polish', polish, ...
-                 'FromSearch', ib > nStart, 'TotalTime', toc(tAll), 'H', H);
+                 'FromSearch', ib > nStart, 'TotalTime', toc(tAll), 'H', H, 'GAHistory', gaHist);
     if H.Verbose
         if out.FromSearch, src = 'proposed by the search'; else, src = 'one of the random starting layouts'; end
         fprintf('NN optimization finished in %.0f s: f1 = %.2f Hz (%s), %d of %d bricks kept, %d layouts analysed in total\n', ...
             out.TotalTime, met.f1, src, nnz(X), nVar, size(D.X, 1));
+    end
+
+    function [state, options, optchanged] = recordGA(options, state, flag)
+        optchanged = false;
+        if ~any(strcmp(flag, {'init', 'iter'})), return; end
+        gaHist.best(end + 1) = min(state.Score);
+        gaHist.mean(end + 1) = mean(state.Score);
     end
 end
 

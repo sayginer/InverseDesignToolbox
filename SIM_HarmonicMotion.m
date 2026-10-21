@@ -65,8 +65,8 @@ if strcmpi(P.Design.Type, 'bricks'), plot_bricks(geom, bricks); end
 %% 3. CHOOSE THE BRICKS TO KEEP  (check: the preview shows exactly the layout you want to simulate)
 % M is the selection on the brick grid: 1 = present, 0 = removed, NaN = not a brick. Coordinates are
 % brick centers in meters. Start from "all present" and remove / keep bricks with a rule, or edit M by hand.
-M = idt_select_bricks(bricks);                                            % A: all bricks present
-% M = idt_select_bricks(bricks, 'KeepFcn', @(x,y,z) abs(x) < 3e-3 | abs(y) < 3e-3);   % B: keep only a cross
+% M = idt_select_bricks(bricks);                                            % A: all bricks present
+M = idt_select_bricks(bricks, 'KeepFcn', @(x,y,z) abs(x) < 3e-3 | abs(y) < 3e-3);   % B: keep only a cross
 % M = idt_select_bricks(bricks, 'RemoveBox', [-20e-3 20e-3 5e-3 20e-3 0 5e-3]);     %    cut a slot
 % M = idt_select_bricks(bricks, 'RemoveIJK', [3 4 1; 3 5 1]);                       %    remove by grid index
 % M(5:8, :, 1) = 0;                                                                 % C: edit the matrix by hand
@@ -86,6 +86,7 @@ P.BC.OutPoints     = [0 0 5e-3; ...             % response points [m], one per r
 P.BC.ExtraMass     = 0.005;                     % lumped extra mass, e.g. a sensor [kg] (0 = none)
 P.BC.ExtraMassBox  = [-10.25e-3 10.25e-3 -8e-3 8e-3 -Inf Inf];   % where it sits [xmin xmax ymin ymax zmin zmax]
 
+idt_validate_params(P, geom);       % plain-language check of everything entered so far (stops with a list of problems)
 bc = idt_make_bc(P);
 plot_bc(geom, bc);
 
@@ -142,6 +143,7 @@ for o = 1:size(met.FRFPeak, 1)
     fprintf('  output %d: peak |u| = %.3g um (%s) at %.1f Hz\n', o, pk * 1e6, dirName(d), met.FRFPeakFreq(o, d));
 end
 fprintf('----------------------------------------\n');
+idt_sanity_checks(model, res, met);     % modal coverage? mesh fine enough? no floating pieces? Read every line.
 
 
 %% 9. PLOT THE RESULTS  (response curves, mode shapes, transmissibility)

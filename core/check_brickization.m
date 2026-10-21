@@ -77,7 +77,7 @@ function info = check_brickization(domain, minPrintSize, density, varargin)
         patch('Faces', Fc, 'Vertices', V, 'FaceVertexCData', C, 'FaceColor', 'flat', ...
               'EdgeColor', [0.2 0.2 0.2], 'LineWidth', 0.3, 'FaceAlpha', 0.85);
         colormap(turbo); clim([0 1]); cb = colorbar; ylabel(cb, 'Fill fraction');
-        axis equal; grid on; view(35, 28); xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
+        axis equal tight; grid on; view(35, 28); xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
         title(sprintf('%d bricks of %.2f x %.2f x %.2f mm, colored by fill (%d weak)', nb, g.Size * 1e3, info.NumWeak));
     end
 end

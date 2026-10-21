@@ -10,10 +10,15 @@ function H = genetic_options(H)
 %   analyses (population x generations).
 %
 % GOAL (same names as SIMP and the neural network)
-%  Objective    'TargetF1'   'TargetF1': make f1 equal TargetF1 | 'MaximizeF1': highest f1 within VolMax
+%  Objective    'TargetF1'   'TargetF1': make f1 equal TargetF1 | 'MaximizeF1': highest f1 within VolMax |
+%                            'MinTransmissibility': ISOLATOR, the smallest peak transmissibility in a frequency band
+%                            (settings in H.Isolation, see below and idt_isolation_options)
 %  TargetF1     []           target for f1 [Hz] (required for 'TargetF1')
 %  VolMax       []           largest volume fraction of the design domain, 0..1
-%                            (required for 'MaximizeF1'; optional upper bound for 'TargetF1')
+%                            (required for 'MaximizeF1'; optional upper bound for the other goals)
+%  Isolation    struct()     'MinTransmissibility' only: Band [f_low f_high] Hz that must be blocked, Output (protected point(s)),
+%                            Pairs ([response base] directions, [3 3] = vertical), TargetT (stop below this peak T).
+%                            Cost = log10(largest T in the band). Needs P.Analysis.Transmissibility (switched on for you).
 %
 % GENETIC ALGORITHM
 %  PopSize      60           individuals per generation
@@ -28,6 +33,7 @@ function H = genetic_options(H)
 % STARTING POPULATION (random smooth layouts, then cleaned)
 %  VolFracRange [0.05 0.45]  volume fraction of the random layouts
 %  FieldRadius  6e-3         smoothness of the random layouts [m] (about 2 brick edges)
+%  DamperFracRange [0.1 0.5] three-state designs (P.Design.Damper set): share of the present bricks that are damper in the random layouts
 %  Seed         1            random seed for the starting population
 %
 % PRINTABILITY (same functions as SIMP and the neural network)
@@ -37,23 +43,24 @@ function H = genetic_options(H)
 %
 % OUTPUT
 %  UseParallel  true         evaluate the individuals in parallel (Parallel Computing Toolbox); falls back to serial
+%  LivePlot     true         redraw the convergence figure after every generation (does not take the focus)
 %  Verbose      true         print one line per generation
 %
 % Author: Dr. Osman Sayginer (InverseDesignToolbox)
 
-    D = struct('Objective', 'TargetF1', 'TargetF1', [], 'VolMax', [], ...
+    D = struct('Objective', 'TargetF1', 'TargetF1', [], 'VolMax', [], 'Isolation', struct(), ...
                'PopSize', 60, 'Generations', 40, 'StallGenerations', 12, 'FreqTol', 0.3, 'EliteCount', 3, ...
                'CrossoverFraction', 0.8, 'MutationRate', 0.004, ...
-               'VolFracRange', [0.05 0.45], 'FieldRadius', 6e-3, 'Seed', 1, ...
-               'Clean', struct(), 'Polish', struct(), 'UseParallel', true, 'Verbose', true);
+               'VolFracRange', [0.05 0.45], 'FieldRadius', 6e-3, 'DamperFracRange', [0.1 0.5], 'Seed', 1, ...
+               'Clean', struct(), 'Polish', struct(), 'UseParallel', true, 'LivePlot', true, 'Verbose', true);
     if nargin < 1 || isempty(H), H = struct(); end
     H = idt_fill_defaults(H, D);
 
-    assert(any(strcmp(H.Objective, {'TargetF1', 'MaximizeF1'})), ...
-        'genetic_options:Objective', 'Objective must be ''TargetF1'' or ''MaximizeF1''.');
+    assert(any(strcmp(H.Objective, {'TargetF1', 'MaximizeF1', 'MinTransmissibility'})), ...
+        'genetic_options:Objective', 'Objective must be ''TargetF1'', ''MaximizeF1'' or ''MinTransmissibility''.');
     if strcmp(H.Objective, 'TargetF1')
         assert(~isempty(H.TargetF1), 'genetic_options:TargetF1', 'Objective ''TargetF1'' needs H.TargetF1 [Hz].');
-    else
+    elseif strcmp(H.Objective, 'MaximizeF1')
         assert(~isempty(H.VolMax), 'genetic_options:VolMax', 'Objective ''MaximizeF1'' needs H.VolMax (0..1).');
     end
     assert(isempty(H.VolMax) || (H.VolMax > 0 && H.VolMax <= 1), 'VolMax must be in (0, 1].');

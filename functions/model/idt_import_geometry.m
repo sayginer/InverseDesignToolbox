@@ -3,7 +3,7 @@ function geom = idt_import_geometry(P)
 %
 %   geom = idt_import_geometry(P)
 %
-% Uses P.Geometry (Files, Names, Materials, Scale). Relative file names start in the toolbox
+% Uses P.Geometry (Files, Names, Materials, Scale, Rotate). Relative file names start in the toolbox
 % folder. Look at the result with plot_geometry(geom): it shows every part and the assembly
 % with the FACE NUMBERS you need for P.BC.FixedFaces.
 %
@@ -16,5 +16,5 @@ function geom = idt_import_geometry(P)
         assert(isfile(files{i}), 'idt_import_geometry:NoCAD', 'CAD file not found: %s', files{i});
     end
     geom = import_geometry(files, 'Names', P.Geometry.Names, 'Materials', P.Geometry.Materials, ...
-                           'Scale', P.Geometry.Scale);
+                           'Scale', P.Geometry.Scale, 'Rotate', P.Geometry.Rotate);
 end

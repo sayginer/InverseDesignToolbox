@@ -16,6 +16,7 @@ function [vmodel, res, met] = idt_cutters_verify(model, geom2)
     P = model.Params;
     P.Design.Type = 'none';
     P.BC.FixedFaces = map_faces(model, geom2.Assembly, P.BC.FixedFaces);
+    if ~isempty(P.BC.LoadFaces), P.BC.LoadFaces = map_faces(model, geom2.Assembly, P.BC.LoadFaces); end   % face loads (static)
     bricks = idt_make_bricks(P, geom2);
     bc     = idt_make_bc(P);
     mesh   = idt_make_mesh(P, geom2);

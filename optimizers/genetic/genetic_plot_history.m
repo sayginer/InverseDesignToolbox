@@ -16,5 +16,13 @@ function fig = genetic_plot_history(out)
     if strcmp(out.H.Objective, 'TargetF1'), set(gca, 'YScale', 'log'); end
     xlabel('Generation'); ylabel('Cost');
     legend('population mean', 'best', 'Location', 'northeast');
-    title(sprintf('GA: %d analyses, best cost %.2g, final f_1 = %.2f Hz', out.NumEvaluations, h.best(end), out.met.f1));
+    if isfield(out, 'PeakT')
+        title(sprintf('GA (isolator): %d analyses, best cost log10(peak T) = %.2f, peak T = %.3g in the band', out.NumEvaluations, h.best(end), out.PeakT));
+    else
+        if isfield(out.met, 'f1')
+            title(sprintf('GA: %d analyses, best cost %.2g, final f_1 = %.2f Hz', out.NumEvaluations, h.best(end), out.met.f1));
+        else
+            title(sprintf('GA: %d analyses, best cost %.3g, compliance %.4g mJ', out.NumEvaluations, h.best(end), out.met.Compliance * 1e3));
+        end
+    end
 end

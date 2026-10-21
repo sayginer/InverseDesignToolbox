@@ -3,7 +3,7 @@ function fig = idt_plot_brick_selection(geom, bricks, M)
 %
 %   fig = idt_plot_brick_selection(geom, bricks, M)
 %
-%   M : brick matrix from idt_select_bricks (1 = present, 0 = removed, NaN = not a brick)
+%   M : brick matrix from idt_select_bricks (1 = present, 0 = removed, NaN = not a brick; 2 = damper material in a three-state design)
 %
 % Kept bricks are drawn as solid blue boxes, removed bricks as a faint grey ghost, and the CAD
 % assembly as a transparent shell for orientation. This is the layout the optimizer sees; the
@@ -12,16 +12,25 @@ function fig = idt_plot_brick_selection(geom, bricks, M)
 % Author: Dr. Osman Sayginer (InverseDesignToolbox)
 
     g = bricks.Grid;
-    keep    = bricks.Present & (M > 0.5);
-    removed = bricks.Present & ~keep;
+    keep    = bricks.Present & (M > 0.5) & (M < 1.5);          % structure (1)
+    damp    = bricks.Present & (M > 1.5);                      % damper material (2), only in three-state designs
+    removed = bricks.Present & ~(M > 0.5);
 
     fig = figure('Name', 'Brick selection', 'Color', 'w', 'Position', [100 90 760 580]);
     pdegplot(geom.Assembly, 'FaceAlpha', 0.05); hold on;
     if any(removed(:)), draw_surface(g, removed, [0.6 0.6 0.6], 0.06, [0.88 0.88 0.88]); end
     if any(keep(:)),    draw_surface(g, keep,    [0.2 0.6 1.0], 0.85, [0.1 0.3 0.6]);    end
-    view(35, 28); axis equal; grid on;
-    title(sprintf('Brick selection: %d of %d bricks kept (%.2f x %.2f x %.2f mm, %d x %d x %d grid)', ...
-        nnz(keep), nnz(bricks.Present), g.Size * 1e3, g.N));
+    if any(damp(:)),    draw_surface(g, damp,    [1.0 0.55 0.1], 0.85, [0.6 0.3 0.05]);  end
+    view(35, 28); grid on;
+    lim = [g.Min(:), g.Min(:) + g.N(:) .* g.Size(:)];          % tight to the design space (the clamp/frame parts of the CAD stay out)
+    xlim(lim(1, :)); ylim(lim(2, :)); zlim(lim(3, :)); daspect([1 1 1]);
+    if any(damp(:))
+        title(sprintf('Brick selection: %d structure (blue) + %d damper (orange) of %d bricks (%.2f x %.2f x %.2f mm, %d x %d x %d grid)', ...
+            nnz(keep), nnz(damp), nnz(bricks.Present), g.Size * 1e3, g.N));
+    else
+        title(sprintf('Brick selection: %d of %d bricks kept (%.2f x %.2f x %.2f mm, %d x %d x %d grid)', ...
+            nnz(keep), nnz(bricks.Present), g.Size * 1e3, g.N));
+    end
 end
 
 function draw_surface(g, solid, color, alpha, edgeColor)

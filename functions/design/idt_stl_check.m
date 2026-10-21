@@ -52,7 +52,7 @@ function fig = show(T, info, name)
                 plot3(V(fe(q, :), 1), V(fe(q, :), 2), V(fe(q, :), 3), 'k-', 'LineWidth', 0.4);
             end
         end
-        axis equal; grid on; camlight headlight; camlight(-30, 30);
+        axis equal tight; grid on; camlight headlight; camlight(-30, 30);
         xlabel(['x (' info.Units ')']); ylabel(['y (' info.Units ')']); zlabel(['z (' info.Units ')']);
         if k == 1
             view(35, 28);

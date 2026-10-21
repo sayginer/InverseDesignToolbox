@@ -35,7 +35,7 @@ function fig = plot_bricks(geom, bricks)
     end
     patch('Faces', faces, 'Vertices', V, 'FaceColor', [0.2 0.6 1.0], 'FaceAlpha', 0.25, ...
           'EdgeColor', [0.1 0.3 0.6], 'LineWidth', 0.5);
-    view(35, 28); axis equal; grid on;
+    view(35, 28); axis equal tight; grid on;
     title(sprintf('Bricks for "%s": %.2f x %.2f x %.2f mm, %d x %d x %d grid, %d bricks', ...
         bricks.Name, g.Size * 1e3, g.N, bricks.NumPresent), 'Interpreter', 'none');
 end

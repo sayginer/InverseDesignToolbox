@@ -1,0 +1,17 @@
+AI-as-designer trial on the static cantilever beam (InverseDesignToolbox)
+Designer: an AI coding assistant (Claude), working from beam-theory reasoning. It did not look at the SIMP, GA or neural-network layouts,
+but it did know their scores (SIMP 33.8 mJ, GA 41.3 mJ, NN 47.9 mJ). Same problem and settings as CASE_*_StaticBeam
+(500 N, 3 mm linear mesh, at most 63 of 126 bricks). The solver scored every design. 19 designs were evaluated in 4 rounds.
+
+Round 1 (4 designs): thick flanges (A) 148.1 mJ, Warren truss (B) 44.3, mirrored truss (C) 43.9, flanges + posts (D) 192.5.
+  Lesson: my first idea (thicken the flanges) was wrong. The web needs diagonals to carry shear.
+Round 2 (5 new designs): 3-wide diagonals 36.9 mJ but 65 bricks (over the limit); truss + thick root (E3) 41.1 mJ with 58 bricks.
+Round 3 (6 designs): best valid 36.9 mJ (F6, 62 bricks).
+Round 4 (4 designs): best valid G3 = 36.38 mJ, 63 bricks, tip movement 72.6 um, highest von Mises stress 40.4 MPa
+  (3-wide staircase diagonals, last diagonal 2-wide, 2-wide root post, started with a descending diagonal).
+
+Comparison (compliance, smaller = stiffer; all with about half of the bricks):
+  full beam 22.8 | SIMP 33.8 (200 solves) | AI designer 36.4 (19 solves) | GA 41.3 (2343) | neural network 47.9 (896) | best of 100 random layouts about 49.9
+
+Caveats: one run by one AI; it knew the competing scores; the designs came from truss families written as code;
+only one problem. Not a general claim that AI beats the search methods.

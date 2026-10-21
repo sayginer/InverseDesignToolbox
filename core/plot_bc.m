@@ -44,6 +44,6 @@ function fig = plot_bc(geom, bc)
     end
     legend([h1 h2 h3], {'Fixed (u=v=w=0)', sprintf('Load %.1f N', bc.LoadAmplitude), 'Output points'}, ...
            'Location', 'bestoutside');
-    view(35, 28); axis equal; grid on;
+    view(35, 28); axis equal tight; grid on;
     title('Boundary conditions, load and output points');
 end

@@ -5,7 +5,8 @@ function [X, hist] = idt_polish_bricks(model, X, goal, C, cleanOpt, opt)
 %
 %   model    : from idt_build_model
 %   X        : starting layout (nVar x 1 logical), normally the output of an optimizer
-%   goal     : struct with Objective ('TargetF1' | 'MaximizeF1'), TargetF1 [Hz], VolMax (0..1 or [])
+%   goal     : struct with Objective ('TargetF1' | 'MaximizeF1' | 'MinTransmissibility'), TargetF1 [Hz], VolMax (0..1 or []),
+%              and for 'MinTransmissibility' Isolation (from idt_isolation_options; the cost is idt_isolation_cost)
 %   C        : from idt_clean_setup            cleanOpt: options of idt_clean_bricks ([] = no cleaning)
 %   opt      : MaxSteps (12), Tol (0.5 Hz, 'TargetF1' stops inside it), UseParallel (true), Verbose (true)
 %
@@ -16,7 +17,8 @@ function [X, hist] = idt_polish_bricks(model, X, goal, C, cleanOpt, opt)
 %   2. all candidates are analysed with idt_analyze (in parallel)
 %   3. the best one is accepted if it improves the goal; stop when nothing improves
 % Goal: 'TargetF1' minimizes |f1 - TargetF1|, 'MaximizeF1' maximizes f1; VolMax (volume fraction of the design
-% domain) is respected if given. The result is a local optimum of single-brick changes.
+% domain) is respected if given. 'MinTransmissibility' lowers the largest transmissibility in the isolation band (the model must
+% compute transmissibility: P.Analysis.Transmissibility = true). The result is a local optimum of single-brick changes.
 %
 % OUTPUT X (polished layout), hist (struct: f1, nBricks, vol per accepted step, including the start)
 %
@@ -25,6 +27,7 @@ function [X, hist] = idt_polish_bricks(model, X, goal, C, cleanOpt, opt)
     if nargin < 6, opt = struct(); end
     opt = idt_fill_defaults(opt, struct('MaxSteps', 12, 'Tol', 0.5, 'UseParallel', true, 'Verbose', true));
     isTarget = strcmp(goal.Objective, 'TargetF1');
+    isIso = strcmp(goal.Objective, 'MinTransmissibility');
     ev = model.ElemVar;
     volBrick = accumarray(ev(ev > 0), model.Vol(ev > 0), [model.NumVars, 1]);
     volTot = sum(volBrick);
@@ -41,20 +44,22 @@ function [X, hist] = idt_polish_bricks(model, X, goal, C, cleanOpt, opt)
     end
 
     X = X(:) > 0;
-    [f1, ok] = evaluate(model, X', false);
+    [f1, ok] = evaluate(model, X', false, goal);
     cur = score(f1, ok, X, goal, isTarget, volBrick, volTot);
     hist = struct('f1', f1, 'nBricks', nnz(X), 'vol', sum(volBrick(X)) / volTot);
-    if opt.Verbose, fprintf('Polish: start f1 = %.2f Hz, %d bricks\n', f1, nnz(X)); end
+    if isIso, lab = 'isolation cost'; else, lab = 'f1 [Hz]'; end
+    if opt.Verbose, fprintf('Polish: start %s = %.3g, %d bricks\n', lab, f1, nnz(X)); end
 
     for step = 1:opt.MaxSteps
         if isTarget && ok && abs(f1 - goal.TargetF1) < opt.Tol, break; end
+        if isIso && ok && ~isempty(goal.Isolation.TargetT) && isempty(goal.Isolation.Pass) && f1 < log10(goal.Isolation.TargetT), break; end
         cand = boundary_toggles(C, X, N);
         if ~isempty(cleanOpt), cand = idt_clean_bricks(C, cand, cleanOpt); end
         cand = cand(any(cand, 2), :);
         cand = unique(cand, 'rows');
         cand = cand(~ismember(cand, X', 'rows'), :);
         if isempty(cand), break; end
-        [fc, okc] = evaluate(model, cand, useP);
+        [fc, okc] = evaluate(model, cand, useP, goal);
         sc = nan(size(fc));
         for q = 1:size(cand, 1)
             sc(q) = score(fc(q), okc(q), cand(q, :)', goal, isTarget, volBrick, volTot);
@@ -64,7 +69,7 @@ function [X, hist] = idt_polish_bricks(model, X, goal, C, cleanOpt, opt)
         X = cand(ib, :)';  f1 = fc(ib);  ok = okc(ib);  cur = best;
         hist(end + 1) = struct('f1', f1, 'nBricks', nnz(X), 'vol', sum(volBrick(X)) / volTot); %#ok<AGROW>
         if opt.Verbose
-            fprintf('Polish step %d: %d candidates -> f1 = %.2f Hz, %d bricks\n', step, size(cand, 1), f1, nnz(X));
+            fprintf('Polish step %d: %d candidates -> %s = %.3g, %d bricks\n', step, size(cand, 1), lab, f1, nnz(X));
         end
     end
 end
@@ -84,21 +89,30 @@ function cand = boundary_toggles(C, X, N)
     for q = 1:numel(v), cand(q, v(q)) = ~cand(q, v(q)); end
 end
 
-function [f1, ok] = evaluate(model, Xrows, useP)
+function [f1, ok] = evaluate(model, Xrows, useP, goal)
+% f1 holds the value of the goal: f1 [Hz], or the peak transmissibility for 'MinTransmissibility'
     n = size(Xrows, 1);
     f1 = nan(n, 1);  ok = false(n, 1);
+    iso = strcmp(goal.Objective, 'MinTransmissibility');
+    I = [];  if iso, I = goal.Isolation; end
     if useP
         parfor i = 1:n
-            [~, m] = idt_analyze(model, Xrows(i, :)');
-            if m.Valid, f1(i) = m.f1; end
+            f1(i) = value(model, Xrows(i, :)', iso, I);
         end
     else
         for i = 1:n
-            [~, m] = idt_analyze(model, Xrows(i, :)');
-            if m.Valid, f1(i) = m.f1; end
+            f1(i) = value(model, Xrows(i, :)', iso, I);
         end
     end
-    ok = isfinite(f1) & f1 > 1;
+    ok = isfinite(f1) & (iso | f1 > 1);
+end
+
+function v = value(model, x, iso, I)
+% f1 [Hz] of one layout, or the isolation cost (idt_isolation_cost); NaN if it cannot be analysed
+    v = NaN;
+    [res, m] = idt_analyze(model, x);
+    if ~m.Valid || ~isfinite(m.f1) || m.f1 <= 1, return; end     % cut off or a hinge-like mechanism (f1 about 0): never accept
+    if iso, v = idt_isolation_cost(res, I); else, v = m.f1; end
 end
 
 function s = score(f1, ok, X, goal, isTarget, volBrick, volTot)
@@ -107,5 +121,11 @@ function s = score(f1, ok, X, goal, isTarget, volBrick, volTot)
     if ~ok, return; end
     vol = sum(volBrick(X > 0)) / volTot;
     if ~isempty(goal.VolMax) && vol > goal.VolMax * 1.0000001, return; end
-    if isTarget, s = abs(f1 - goal.TargetF1); else, s = -f1; end
+    if isTarget
+        s = abs(f1 - goal.TargetF1);
+    elseif strcmp(goal.Objective, 'MinTransmissibility')
+        s = f1;                                              % f1 holds the isolation cost: smaller is better
+    else
+        s = -f1;
+    end
 end

@@ -9,6 +9,8 @@ function geom = import_geometry(files, varargin)
 %   'Materials'  material per file, see get_material_properties.m
 %   'Scale'      factor to convert file units to METERS. Default 1, because STEP/IGES
 %                files are converted to meters on import. Use 1e-3 for an STL in mm.
+%   'Rotate'     [] = as in the file | [angle_deg ax ay az]: every part is rotated about the axis (ax,ay,az) through the
+%                origin. Used to bring the thickness direction along z (the shape module cuts through z).
 %   'InsideMeshHmax'  size of the coarse helper mesh used only for inside/outside
 %                tests (default 1 mm)
 %
@@ -26,6 +28,7 @@ function geom = import_geometry(files, varargin)
     addParameter(p, 'Names', []);
     addParameter(p, 'Materials', []);
     addParameter(p, 'Scale', 1);
+    addParameter(p, 'Rotate', []);
     addParameter(p, 'InsideMeshHmax', 1e-3);
     parse(p, varargin{:});
     r = p.Results;
@@ -40,6 +43,7 @@ function geom = import_geometry(files, varargin)
     for i = 1:n
         gm = fegeometry(files{i});
         if r.Scale ~= 1, gm = scale(gm, r.Scale); end
+        if ~isempty(r.Rotate), gm = rotate(gm, r.Rotate(1), [0 0 0], r.Rotate(2:4)); end
         ext = max(max(gm.Vertices) - min(gm.Vertices));
         if ext > 1
             warning('import_geometry:Units', ['Part "%s" is %.1f units across. If the file is in mm, ' ...

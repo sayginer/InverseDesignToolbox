@@ -9,6 +9,7 @@ function mat = get_material_properties(mat_input)
 %
 %   % Or pass a custom struct on the fly:
 %   mat = get_material_properties(struct('Name','MyResin', 'E',4.5e9, 'nu',0.35, 'rho',1200));
+%   mat = get_material_properties(struct('Name','Damper', 'E',5e6, 'nu',0.45, 'rho',1100, 'LossFactor',0.5));  % optional loss factor
 %
 % =========================================================================
 % BUILT-IN STANDARD MATERIALS:
@@ -43,6 +44,7 @@ function mat = get_material_properties(mat_input)
         mat.E    = getField(mat_input, 'E', 200e9);
         mat.nu   = getField(mat_input, 'nu', 0.30);
         mat.rho  = getField(mat_input, 'rho', 7800);
+        mat.LossFactor = getField(mat_input, 'LossFactor', NaN);   % eta = tan(delta); NaN = use the analysis damping (2 x Zeta)
         return;
     end
 

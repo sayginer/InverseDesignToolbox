@@ -48,7 +48,7 @@ function fig = idt_plot_cutters(smodel, S, cut)
         plot3(c3(smodel.OutNodes, 1), c3(smodel.OutNodes, 2), c3(smodel.OutNodes, 3), 'go', 'MarkerFaceColor', 'g', 'MarkerSize', 7);
         lp = mean(c3(smodel.LoadNodes, :), 1);
         plot3(lp(1), lp(2), lp(3), 'm*', 'MarkerSize', 9, 'LineWidth', 1.5);
-        axis equal; grid on; camlight headlight;
+        axis equal tight; grid on; camlight headlight;
         xlabel('x (mm)'); ylabel('y (mm)'); zlabel('z (mm)');
         if k == 1, view(0, 90); title('top view: exact cutters (black) on the analysis mesh');
         else, view(35, 28); title('3-D view'); end

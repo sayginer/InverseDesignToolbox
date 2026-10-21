@@ -4,14 +4,16 @@ function fig = plot_mesh(mesh, varargin)
 %   right = cut-away showing the interior mesh (elements with centroid y <= 0 by default)
 %
 %   plot_mesh(mesh)
-%   plot_mesh(mesh, 'ClipX', 0)     cut along x instead ('ClipY' default 0, 'ClipZ' also possible)
+%   plot_mesh(mesh, 'ClipX', 0)     cut along x instead ('ClipY' default = middle of the part, 'ClipZ' also possible)
 %
 % Author: Dr. Osman Sayginer (InverseDesignToolbox)
     p = inputParser;
     addParameter(p, 'ClipX', []); addParameter(p, 'ClipY', []); addParameter(p, 'ClipZ', []);
     parse(p, varargin{:});
     r = p.Results;
-    if isempty(r.ClipX) && isempty(r.ClipY) && isempty(r.ClipZ), r.ClipY = 0; end
+    if isempty(r.ClipX) && isempty(r.ClipY) && isempty(r.ClipZ)
+        r.ClipY = mean([min(mesh.Nodes(:,2)) max(mesh.Nodes(:,2))]);   % mid-plane of the part (y = 0 is not always inside it)
+    end
 
     el = mesh.Elements(:, 1:4); nd = mesh.Nodes;
     c = (nd(el(:,1),:) + nd(el(:,2),:) + nd(el(:,3),:) + nd(el(:,4),:)) / 4;
@@ -34,7 +36,7 @@ function panel(el, nd, ttl)
     F = boundary_faces(el);
     patch('Faces', F, 'Vertices', nd * 1e3, 'FaceColor', [0.75 0.85 1], 'EdgeColor', [0.2 0.2 0.3], ...
           'LineWidth', 0.25);
-    axis equal; grid on; view(35, 28); xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
+    axis equal tight; grid on; view(35, 28); xlabel('X (mm)'); ylabel('Y (mm)'); zlabel('Z (mm)');
     title(ttl);
 end
 

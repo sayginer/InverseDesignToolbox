@@ -10,8 +10,9 @@ function fig = nn_plot_surrogate(out)
 % Author: Dr. Osman Sayginer (InverseDesignToolbox)
 
     sur = out.sur;  H = out.H;
-    fig = figure('Name', 'Neural network surrogate', 'Color', 'w', 'Position', [100 100 1000 420]);
-    tiledlayout(1, 2, 'TileSpacing', 'compact');
+    hasGA = isfield(out, 'GAHistory') && ~isempty(out.GAHistory.best);
+    fig = figure('Name', 'Neural network surrogate', 'Color', 'w', 'Position', [100 100 1000 + 450 * hasGA 420]);
+    tiledlayout(1, 2 + hasGA, 'TileSpacing', 'compact');
 
     nexttile; hold on; grid on;
     plot(sur.val.f1True, sur.val.f1Pred, 'b.', 'MarkerSize', 12);
@@ -30,4 +31,15 @@ function fig = nn_plot_surrogate(out)
     ylabel('f_1 of the best verified candidate (Hz)');
     xlabel('Round'); xticks(k);
     title('Search on the surrogate, verified by FEA');
+
+    if hasGA                                  % convergence of the genetic algorithm that searches the surrogate
+        g = out.GAHistory;  kk = 1:numel(g.best);
+        nexttile; hold on; grid on;
+        plot(kk, g.mean, 'c-', 'LineWidth', 1.2);
+        plot(kk, g.best, 'b-', 'LineWidth', 1.8);
+        for s = g.start(2:end), xline(s - 0.5, 'k:'); end
+        xlabel('Generation (all searches in a row; dotted = new search)'); ylabel('Surrogate cost');
+        legend('population mean', 'best', 'Location', 'northeast');
+        title('GA on the surrogate: convergence');
+    end
 end

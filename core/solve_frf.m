@@ -11,7 +11,9 @@ function res = solve_frf(model, X, varargin)
 %
 % Removed bricks are deleted from the mesh. Pieces that are no longer connected to a
 % clamped node are dropped (res.DroppedElems). The response is computed by modal
-% superposition (modal damping Zeta) with a static correction for truncated modes.
+% superposition (modal damping Zeta, or per-mode damping from material loss factors, see below) with a static correction for
+% truncated modes. If model.Damper exists (three-state design), X = 0 is void, X = 1 the structural grade and X = 2 the soft damper
+% grade: damper elements get model.Damper.KScale / RhoScale / Eta. A logical X means void / structure. res.ZetaModes = damping of every mode.
 %
 % OUTPUT res
 %   .Valid           false if the load/output points are cut off from every support
@@ -30,7 +32,7 @@ function res = solve_frf(model, X, varargin)
     parse(po, varargin{:});
     opt = po.Results;
     if nargin < 2 || isempty(X), X = true(model.NumVars, 1); end
-    X = X(:) > 0.5;
+    Xraw = X(:);  X = Xraw > 0.5;
     assert(numel(X) == model.NumVars, 'X must have %d entries.', model.NumVars);
     fr = model.Freq; bc = model.BC;
     npe = model.Npe; nd = 3 * npe;
@@ -46,8 +48,14 @@ function res = solve_frf(model, X, varargin)
 
     % ---- active elements; remove floating pieces -----------------------------------
     ev = model.ElemVar;
+    twoMat = isfield(model, 'Damper') && ~isempty(model.Damper);     % three-state design: X = 0 void, 1 structure, 2 damper
     act = ev == 0;
-    act(ev > 0) = X(ev(ev > 0));
+    if twoMat
+        st = min(max(round(Xraw), 0), 2);
+        act(ev > 0) = st(ev(ev > 0)) > 0;
+    else
+        act(ev > 0) = X(ev(ev > 0));
+    end
     nAct = nnz(act);
     cn = model.Elem(act, :);
     G = graph(repmat(cn(:,1), npe - 1, 1), reshape(cn(:, 2:end), [], 1), [], model.NumNodes);
@@ -72,8 +80,16 @@ function res = solve_frf(model, X, varargin)
     ed = reshape(permute(reshape([3*lc-2, 3*lc-1, 3*lc], [], npe, 3), [1 3 2]), [], nd)';   % nd x Ne
     iK = reshape(repmat(ed, nd, 1), [], 1);
     jK = reshape(repelem(ed, nd, 1), [], 1);
-    K = sparse(iK, jK, reshape(model.sK(:, eid), [], 1), n, n);
-    rv = model.Rho(eid) .* model.Vol(eid);
+    % element scale factors: structural grade 1; damper grade has its own stiffness and density ratio (same Poisson ratio assumed)
+    kS = ones(numel(eid), 1);  rS = kS;
+    etaE = nan(numel(eid), 1);  if isfield(model, 'Eta'), etaE = model.Eta(eid); end    % loss factor per element, NaN = default 2 x Zeta
+    if twoMat
+        isDam = false(model.NumElems, 1);  isDam(ev > 0) = st(ev(ev > 0)) == 2;  isDam = isDam(eid);
+        kS(isDam) = model.Damper.KScale;  rS(isDam) = model.Damper.RhoScale;  etaE(isDam) = model.Damper.Eta;
+    end
+    sKe = model.sK(:, eid) .* kS';
+    K = sparse(iK, jK, reshape(sKe, [], 1), n, n);
+    rv = model.Rho(eid) .* model.Vol(eid) .* rS;
     M = sparse(iK, jK, reshape(model.Mref3(:) * rv', [], 1), n, n);
 
     mUsed = model.MassNodes(loc(model.MassNodes) > 0);
@@ -112,6 +128,23 @@ function res = solve_frf(model, X, varargin)
     wn = sqrt(max(lam, 0));
     Phi = Phi ./ sqrt(sum(Phi .* (Mf * Phi), 1));
 
+    % ---- modal damping ratio of every mode ---------------------------------------------------------------
+    % Default: the same Zeta for all modes. If materials have loss factors (or a damper grade exists), modal strain energy method:
+    %   zeta_n = 1/2 * sum_e eta_e U_e,n / sum_e U_e,n     U_e,n = strain energy of element e in mode n
+    % so a mode that bends the lossy material a lot is damped a lot. For one material with eta = 2 Zeta this equals Zeta.
+    zv = fr.Zeta * ones(nm, 1);
+    if twoMat || any(~isnan(etaE))
+        etaE(isnan(etaE)) = 2 * fr.Zeta;
+        PhiFull = zeros(n, nm);  PhiFull(isFree, :) = Phi;
+        Ke = reshape(sKe, nd, nd, []);
+        for k = 1:nm
+            pk = reshape(PhiFull(ed(:), k), nd, 1, []);
+            Ue = 0.5 * squeeze(sum(pk .* pagemtimes(Ke, pk), 1));
+            zv(k) = 0.5 * sum(etaE .* Ue) / max(sum(Ue), realmin);
+        end
+    end
+    res.ZetaModes = zv;
+
     % ---- harmonic response ---------------------------------------------------------------------------------
     if isfield(fr, 'Step') && ~isempty(fr.Step) && fr.Step > 0
         freq = fr.Start : fr.Step : fr.End;
@@ -128,7 +161,7 @@ function res = solve_frf(model, X, varargin)
     has = oFree > 0;
     PhiO(has, :) = Phi(oFree(has), :); uO(has) = ustat(oFree(has));
     resid = uO - PhiO * (q ./ wn.^2);                      % static correction for truncated modes
-    U = PhiO * (q ./ (wn.^2 - w.^2 + 2i * fr.Zeta * wn .* w)) + resid;
+    U = PhiO * (q ./ (wn.^2 - w.^2 + 2i * zv .* wn .* w)) + resid;
     U = permute(reshape(U, 3, nOut, []), [2 1 3]);
 
     % ---- base-excitation transmissibility (optional) -----------------------------------------------------------
@@ -137,7 +170,7 @@ function res = solve_frf(model, X, varargin)
     % where r_b is a unit rigid translation along b. Absolute response / base motion:
     %   T = delta_cb + u_rel,c / u_b   (displacement, velocity and acceleration ratios are equal).
     if opt.Transmissibility
-        Dn = wn.^2 - w.^2 + 2i * fr.Zeta * wn .* w;
+        Dn = wn.^2 - w.^2 + 2i * zv .* wn .* w;
         g = zeros(nf, 3);
         for b = 1:3
             rb = zeros(n, 1); rb(b:3:end) = 1;

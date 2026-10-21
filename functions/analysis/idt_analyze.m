@@ -17,8 +17,10 @@ function [res, met] = idt_analyze(model, X)
     switch model.Params.Analysis.Type
         case 'ModalHarmonic'
             [res, met] = analysis_modal_harmonic(model, X);
+        case 'Static'
+            [res, met] = analysis_static(model, X);
         otherwise
-            error('idt_analyze:Type', 'Unknown analysis type "%s". Available: ModalHarmonic.', ...
+            error('idt_analyze:Type', 'Unknown analysis type "%s". Available: ModalHarmonic, Static.', ...
                   model.Params.Analysis.Type);
     end
 end
